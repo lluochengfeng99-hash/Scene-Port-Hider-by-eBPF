@@ -1,0 +1,41 @@
+name: Build Scene Port Hider Module
+
+on:
+  workflow_dispatch: # 允许你手动点击按钮触发编译
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up NDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 34
+          ndk-version: '25.2.9519653' # 根据eBPF编译需求，通常需要相对较新的NDK
+
+      - name: Build eBPF and Module
+        run: |
+          # 执行项目内自带的编译脚本
+          # 注意：根据原项目DEPLOY.md或tools内的脚本名进行调用
+          # 这里假设项目根目录下有编译脚本，若无，需根据其 Makefile 进行 make 编译
+          chmod +x ./tools/build.sh || true
+          if [ -f "./tools/build.sh" ]; then
+             ./tools/build.sh
+          else
+             echo "请检查项目具体的编译命令，如果是Makefile，请在此处替换为 make"
+             make
+          fi
+
+      - name: Package Magisk Module
+        run: |
+          # 将编译产物和 service.d 等打包成 zip
+          zip -r scene-port-hider.zip system/ service.d/ module.prop || echo "打包失败，请检查产物路径"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Scene-Port-Hider-Module
+          path: ./*.zip
